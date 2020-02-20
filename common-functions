@@ -467,7 +467,7 @@ service_link() {
   [[ -n "$SERVICE_QUERYSTRING" ]] && SERVICE_URL="${SERVICE_URL}?${SERVICE_QUERYSTRING}"
   config_set "$APP" "${ALIAS}_URL=$SERVICE_URL"
   config_set "$APP" "${ALIAS}_USER=neo4j"
-  config_set "$APP" "${ALIAS}_PASSWORD=$SERVICE_PASSWORD"
+  config_set "$APP" "${ALIAS}_PASSWORD=$PASSWORD"
 }
 
 service_linked_apps() {
