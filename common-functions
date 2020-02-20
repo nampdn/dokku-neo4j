@@ -430,6 +430,7 @@ service_link() {
   declare SERVICE="$1" APP="$2"
   update_plugin_scheme_for_app "$APP"
   local SERVICE_URL=$(service_url "$SERVICE")
+  local PASSWORD="$(service_password "$SERVICE")"
   local SERVICE_NAME="$(get_service_name "$SERVICE")"
   local SERVICE_ROOT="$PLUGIN_DATA_ROOT/$SERVICE"
   local EXISTING_CONFIG=$(config_all "$APP")
@@ -465,6 +466,8 @@ service_link() {
   fi
   [[ -n "$SERVICE_QUERYSTRING" ]] && SERVICE_URL="${SERVICE_URL}?${SERVICE_QUERYSTRING}"
   config_set "$APP" "${ALIAS}_URL=$SERVICE_URL"
+  config_set "$APP" "${ALIAS}_USER=neo4j"
+  config_set "$APP" "${ALIAS}_PASSWORD=$SERVICE_PASSWORD"
 }
 
 service_linked_apps() {
