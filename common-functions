@@ -777,10 +777,14 @@ service_unlink() {
   declare SERVICE="$1" APP="$2"
   update_plugin_scheme_for_app "$APP"
   local SERVICE_URL=$(service_url "$SERVICE")
+  local PASSWORD=$(service_password "$SERVICE")
   local SERVICE_NAME="$(get_service_name "$SERVICE")"
   local EXISTING_CONFIG=$(config_all "$APP")
   local SERVICE_DNS_HOSTNAME=$(service_dns_hostname "$SERVICE")
+  local ALIAS="$PLUGIN_DEFAULT_ALIAS"
   local LINK=($(echo "$EXISTING_CONFIG" | grep "$SERVICE_URL" | cut -d: -f1)) || true
+  local LINK_USER="${ALIAS}_USER"
+  local LINK_PASSWORD="${ALIAS}_PASSWORD=$PASSWORD"
 
   remove_from_links_file "$SERVICE" "$APP"
 
@@ -794,6 +798,8 @@ service_unlink() {
 
   [[ -z ${LINK[*]} ]] && dokku_log_fail "Not linked to app $APP"
   config_unset "$APP" "${LINK[*]}"
+  config_unset "$APP" "${LINK_USER}"
+  config_unset "$APP" "${LINK_PASSWORD}"
 }
 
 service_version() {
