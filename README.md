@@ -11,7 +11,7 @@ Unofficial neo4j plugin for dokku. Currently defaults to installing [neo4j 4.0.0
 
 ```shell
 # on 0.12.x+
-sudo dokku plugin:install https://github.com/nampdn/dokku-neo4j.git neo4j
+sudo dokku plugin:install https://github.com/nampdn/dokku-neo4j.git --name neo4j
 ```
 
 ## commands
