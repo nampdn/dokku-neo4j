@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 export NEO4J_IMAGE=${NEO4J_IMAGE:="neo4j"}
-export NEO4J_IMAGE_VERSION=${NEO4J_IMAGE_VERSION:="4.0.0"}
+export NEO4J_IMAGE_VERSION=${NEO4J_IMAGE_VERSION:="4.4.4-community"}
 export NEO4J_ROOT=${NEO4J_ROOT:="$DOKKU_LIB_ROOT/services/neo4j"}
 export NEO4J_HOST_ROOT=${NEO4J_HOST_ROOT:=$NEO4J_ROOT}
 

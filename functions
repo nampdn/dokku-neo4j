@@ -111,11 +111,27 @@ service_export() {
   local SERVICE_NAME="$(get_service_name "$SERVICE")"
   local DATABASE_NAME="$(get_database_name "$SERVICE")"
   local PASSWORD="$(service_password "$SERVICE")"
+  local SERVICE_HOST_ROOT="$PLUGIN_DATA_HOST_ROOT/$SERVICE"
 
+  # dokku_log_warn "Stopping database neo4j"
+  # the following can be used with enterprise version, instead of stopping the container
+  # docker exec "$SERVICE_NAME" bash cypher-shell -u neo4j -p "$PASSWORD" -d system "STOP DATABASE neo4j;" >/dev/null 2>/dev/null
+
+  service_stop "$SERVICE" >/dev/null 2>/dev/null
+  
   [[ -n $SSH_TTY ]] && stty -opost
-  docker exec "$SERVICE_NAME" bash -c "mongodump -d $DATABASE_NAME -u \"$SERVICE\" -p \"$PASSWORD\" --authenticationDatabase \"$DATABASE_NAME\" --quiet --gzip --archive 2>/dev/null"
+  # the following can be used with enterprise version, instead of spinning up new container 
+  # docker exec "$SERVICE_NAME" bash -c "neo4j-admin dump --database=neo4j --to=- 2>error2.txt"
+  docker run --entrypoint="/bin/bash" -v "$SERVICE_HOST_ROOT/data:/data" -v "$SERVICE_HOST_ROOT/logs:/logs" --env-file="$SERVICE_ROOT/ENV" --env "NEO4J_AUTH=neo4j/$PASSWORD" "$PLUGIN_IMAGE:$PLUGIN_IMAGE_VERSION" -c "neo4j-admin dump --database=neo4j --to=- 2>error2.txt"
+
   status=$?
   [[ -n $SSH_TTY ]] && stty opost
+  
+  # dokku_log_warn "Starting database neo4j"
+  service_start "$SERVICE" >/dev/null 2>/dev/null
+
+  # docker exec "$SERVICE_NAME" bash cypher-shell -u neo4j -p "$PASSWORD" -d system "START DATABASE neo4j;" >/dev/null 2>/dev/null
+  
   exit $status
 }
 
@@ -130,7 +146,25 @@ service_import() {
   if [[ -t 0 ]]; then
     dokku_log_fail "No data provided on stdin."
   fi
-  docker exec -i "$SERVICE_NAME" bash -c "mongorestore -u \"$SERVICE\" -p \"$PASSWORD\" --authenticationDatabase \"$DATABASE_NAME\" --gzip --archive --nsFrom '\$db\$.\$coll\$' --nsTo '$DATABASE_NAME.\$coll\$'"
+
+  # A database needs to be stopped before a dump can be made
+  # the following can be used with enterprise version, instead of stopping the container
+  # docker exec "$SERVICE_NAME" bash cypher-shell -u neo4j -p "$PASSWORD" -d system "STOP DATABASE neo4j;" 
+  service_stop "$SERVICE" 
+  
+  
+  dokku_log_verbose_quiet "Loading data into neo4j container"
+  # Run as --user neo4j otherwise te database is made as root and you get AccessDenied error
+  # see https://community.neo4j.com/t/database-offline-and-will-not-restart/27914/5 
+  # --from=- means load from stdin
+  # command for enteprise version:
+  # docker exec --user neo4j -i "$SERVICE_NAME" bash -c "neo4j-admin load --database=neo4j --force --from=-"
+  # -i for reading from stdin
+  docker run --user neo4j --entrypoint="/bin/bash" -i -v "$SERVICE_HOST_ROOT/data:/data" -v "$SERVICE_HOST_ROOT/logs:/logs" --env-file="$SERVICE_ROOT/ENV" --env "NEO4J_ACCEPT_LICENSE_AGREEMENT=yes" --env "NEO4J_AUTH=neo4j/$PASSWORD" "$PLUGIN_IMAGE:$PLUGIN_IMAGE_VERSION" -c "neo4j-admin load --database=neo4j --force --from=-"   
+
+  # start service again
+  service_start "$SERVICE" 
+  #docker exec "$SERVICE_NAME" bash cypher-shell -u neo4j -p "$PASSWORD" -d system "START DATABASE neo4j;" 
 }
 
 service_start() {
