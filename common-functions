@@ -187,8 +187,10 @@ service_backup() {
     dokku_log_fail "Provide AWS credentials or use the --use-iam flag"
   fi
 
-  TMPDIR=$(mktemp -d)
+  # Create the temp dir in the DOKKU_ROOT, ie /home/dokku, so we can also retreive it when running Dokku as container
+  TMPDIR=$(mktemp -d -p "$DOKKU_ROOT")
   trap 'rm -rf "$TMPDIR" > /dev/null' RETURN INT TERM EXIT
+
 
   docker inspect "$ID" &>/dev/null || dokku_log_fail "Service container does not exist"
   is_container_status "$ID" "Running" || dokku_log_fail "Service container is not running"
@@ -198,7 +200,22 @@ service_backup() {
   # Build parameter list for s3backup tool
   BACKUP_PARAMETERS="$BACKUP_PARAMETERS -e BUCKET_NAME=$BUCKET_NAME"
   BACKUP_PARAMETERS="$BACKUP_PARAMETERS -e BACKUP_NAME=${PLUGIN_COMMAND_PREFIX}-${SERVICE}"
-  BACKUP_PARAMETERS="$BACKUP_PARAMETERS -v ${TMPDIR}:/backup"
+  # BACKUP_PARAMETERS="$BACKUP_PARAMETERS -v ${TMPDIR}:/backup"
+
+  # Need to build the correct mount path. If Dokku is not running as a container itself 
+  # then $DOKKU_ROOT == $DOKKU_HOST_ROOT, so the following code would not change anything to the source 
+  # mount path. However, if Dokku is running as container $DOKKU_HOST_ROOT should be set as env variable during startup,
+  # to point to the absolute path on the host running the containers 
+  
+  # Remove the DOKKU_ROOT prefix from the TMPDIR
+  TMPDIR_HOST_INTERMEDIATE="${TMPDIR#"$DOKKU_ROOT"}"
+  
+  # Prepent the DOKKU_HOST_ROOT to the tmp dir, this we can use as mount point for a new container
+  TMPDIR_HOST="${DOKKU_HOST_ROOT}${TMPDIR_HOST_INTERMEDIATE}"
+
+  # The S3plugin requires the data-to-be-stored in the /backup dir
+  BACKUP_PARAMETERS="$BACKUP_PARAMETERS -v ${TMPDIR_HOST}:/backup"
+
 
   if [[ -f "$SERVICE_BACKUP_ROOT/AWS_DEFAULT_REGION" ]]; then
     BACKUP_PARAMETERS="$BACKUP_PARAMETERS -e AWS_DEFAULT_REGION=$(cat "$SERVICE_BACKUP_ROOT/AWS_DEFAULT_REGION")"
@@ -217,7 +234,8 @@ service_backup() {
   fi
 
   # shellcheck disable=SC2086
-  docker run --rm $BACKUP_PARAMETERS dokku/s3backup:0.10.1
+  #dokku_log_warn "using $BACKUP_PARAMETERS"
+  docker run --rm $BACKUP_PARAMETERS dokku/s3backup:0.12.0
 }
 
 service_backup_auth() {
