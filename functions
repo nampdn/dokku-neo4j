@@ -18,7 +18,7 @@ service_connect() {
   local SERVICE_TTY_OPTS
   has_tty && SERVICE_TTY_OPTS="-t"
 
-  docker exec -i $SERVICE_TTY_OPTS "$SERVICE_NAME" mongo -u "$SERVICE" -p "$PASSWORD" --authenticationDatabase "$DATABASE_NAME" "$DATABASE_NAME"
+  docker exec -i "$SERVICE_TTY_OPTS" "$SERVICE_NAME" mongo -u "$SERVICE" -p "$PASSWORD" --authenticationDatabase "$DATABASE_NAME" "$DATABASE_NAME"
 }
 
 service_create() {
@@ -33,8 +33,8 @@ service_create() {
 
   if ! service_image_exists "$SERVICE"; then
     if [[ "$PLUGIN_DISABLE_PULL" == "true" ]]; then
-      dokku_log_warn "${PLUGIN_DISABLE_PULL_VARIABLE} environment variable detected. Not running pull command." 1>&2
-      dokku_log_warn "   docker pull ${IMAGE}" 1>&2
+      dokku_log_warn "$PLUGIN_DISABLE_PULL_VARIABLE environment variable detected. Not running pull command." 1>&2
+      dokku_log_warn "   docker pull $IMAGE" 1>&2
       dokku_log_warn "$PLUGIN_SERVICE service creation failed"
       exit 1
     fi
@@ -93,7 +93,7 @@ service_create_container() {
   fi
 
   # shellcheck disable=SC2086
-  ID=$(docker run --name "$SERVICE_NAME" -v "$SERVICE_HOST_ROOT/data:/data" -v "$SERVICE_HOST_ROOT/logs:/logs" --env-file="$SERVICE_ROOT/ENV" --env "NEO4J_AUTH=neo4j/$PASSWORD" -d --restart always --label dokku=service --label dokku.service=neo4j "$PLUGIN_IMAGE:$PLUGIN_IMAGE_VERSION" neo4j $NEO4J_CONFIG_OPTIONS)
+  ID=$(docker run --name "$SERVICE_NAME" -v "$SERVICE_HOST_ROOT/data:/data" -v "$SERVICE_HOST_ROOT/logs:/logs" --env-file="$SERVICE_ROOT/ENV" --env "NEO4J_AUTH=neo4j/$PASSWORD" -d --restart always --label dokku=service --label dokku.service=neo4j "$PLUGIN_IMAGE:$PLUGIN_IMAGE_VERSION" neo4j "$NEO4J_CONFIG_OPTIONS")
   echo "$ID" >"$SERVICE_ROOT/ID"
 
   dokku_log_verbose_quiet "Waiting for container to be ready"
@@ -132,7 +132,7 @@ service_export() {
 
   # docker exec "$SERVICE_NAME" bash cypher-shell -u neo4j -p "$PASSWORD" -d system "START DATABASE neo4j;" >/dev/null 2>/dev/null
   
-  exit $status
+  exit "$status"
 }
 
 service_import() {
@@ -172,7 +172,7 @@ service_start() {
   local QUIET="$2"
   local SERVICE_ROOT="$PLUGIN_DATA_ROOT/$SERVICE"
   local SERVICE_NAME="$(get_service_name "$SERVICE")"
-  local ID=$(docker ps -aq --no-trunc --filter "status=running" --filter "name=^/$SERVICE_NAME$" --format '{{ .ID }}') || true
+  local ID="$(docker ps -aq --no-trunc --filter "status=running" --filter "name=^/$SERVICE_NAME$" --format '{{ .ID }}')" || true
   if [[ -n $ID ]]; then
     [[ -z $QUIET ]] && dokku_log_warn "Service is already started"
     if [[ ! -f "$SERVICE_ROOT/ID" ]] || [[ "$(cat "$SERVICE_ROOT/ID")" != "$ID" ]]; then
@@ -183,7 +183,7 @@ service_start() {
   fi
 
   dokku_log_info2_quiet "Starting container"
-  local PREVIOUS_ID=$(docker ps -aq --no-trunc --filter "status=exited" --filter "name=^/$SERVICE_NAME$" --format '{{ .ID }}') || true
+  local PREVIOUS_ID="$(docker ps -aq --no-trunc --filter "status=exited" --filter "name=^/$SERVICE_NAME$" --format '{{ .ID }}')" || true
   local ROOTPASSWORD="$(service_root_password "$SERVICE")"
   local PASSWORD="$(service_password "$SERVICE")"
 
