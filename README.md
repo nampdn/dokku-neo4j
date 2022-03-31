@@ -11,7 +11,7 @@ Unofficial neo4j plugin for dokku. Currently defaults to installing [neo4j 4.0.0
 
 ```shell
 # on 0.12.x+
-sudo dokku plugin:install https://github.com/nampdn/dokku-neo4j.git neo4j
+sudo dokku plugin:install https://github.com/nampdn/dokku-neo4j.git --name neo4j
 ```
 
 ## commands
@@ -140,10 +140,10 @@ dokku neo4j:logs lolipop
 dokku neo4j:logs lolipop -t # to tail
 
 # you can dump the database
-dokku neo4j:export lolipop > lolipop.dump.gz
+dokku neo4j:export lolipop > lolipop.dump
 
 # you can import a dump
-dokku neo4j:import lolipop < database.dump.gz
+dokku neo4j:import lolipop < database.dump
 
 # you can clone an existing database to a new one
 dokku neo4j:clone lolipop new_database
